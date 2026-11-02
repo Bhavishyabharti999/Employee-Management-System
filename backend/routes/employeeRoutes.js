@@ -10,16 +10,40 @@ const {
     deleteEmployee
 } = require("../controllers/employeeController");
 
-// Add employee
-router.post("/", addEmployee);
+const {
+    verifyToken,
+    checkRole
+} = require("../middleware/authMiddleware");
 
-// Get all employees
-router.get("/", getAllEmployees);
+// Admin and HR Manager can add employees
+router.post(
+    "/",
+    verifyToken,
+    checkRole("Admin", "HR Manager"),
+    addEmployee
+);
 
-// Update employee
-router.put("/:id", updateEmployee);
+// All logged-in users can view employees for now
+router.get(
+    "/",
+    verifyToken,
+    getAllEmployees
+);
 
-// Delete employee
-router.delete("/:id", deleteEmployee);
+// Admin and HR Manager can update employees
+router.put(
+    "/:id",
+    verifyToken,
+    checkRole("Admin", "HR Manager"),
+    updateEmployee
+);
+
+// Only Admin and HR Manager can delete employees
+router.delete(
+    "/:id",
+    verifyToken,
+    checkRole("Admin", "HR Manager"),
+    deleteEmployee
+);
 
 module.exports = router;
