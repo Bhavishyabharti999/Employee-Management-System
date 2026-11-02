@@ -6,6 +6,8 @@ const router = express.Router();
 const {
     addEmployee,
     getAllEmployees,
+    getMyProfile,
+    updateMyProfile,
     updateEmployee,
     deleteEmployee
 } = require("../controllers/employeeController");
@@ -15,6 +17,22 @@ const {
     checkRole
 } = require("../middleware/authMiddleware");
 
+// Employee can view their own profile
+router.get(
+    "/my-profile",
+    verifyToken,
+    checkRole("Employee"),
+    getMyProfile
+);
+
+// Employee can update only their own contact number
+router.put(
+    "/my-profile",
+    verifyToken,
+    checkRole("Employee"),
+    updateMyProfile
+);
+
 // Admin and HR Manager can add employees
 router.post(
     "/",
@@ -23,7 +41,7 @@ router.post(
     addEmployee
 );
 
-// All logged-in users can view employees for now
+// All logged-in users can view employees based on their role
 router.get(
     "/",
     verifyToken,
@@ -38,7 +56,7 @@ router.put(
     updateEmployee
 );
 
-// Only Admin and HR Manager can delete employees
+// Admin and HR Manager can delete employees
 router.delete(
     "/:id",
     verifyToken,

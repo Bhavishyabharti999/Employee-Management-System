@@ -1,5 +1,6 @@
 
 const API_URL = "http://localhost:3000/api/employees";
+const AUTH_URL = "http://localhost:3000/api/auth";
 
 // Check login status
 const token = localStorage.getItem("token");
@@ -17,11 +18,26 @@ const submitBtn = document.getElementById("submitBtn");
 const logoutBtn = document.getElementById("logoutBtn");
 const welcomeUser = document.getElementById("welcomeUser");
 
+const profileForm = document.getElementById("profileForm");
+const profileDetails = document.getElementById("profileDetails");
+const profileContact = document.getElementById("profileContact");
+const profileMessage = document.getElementById("profileMessage");
+
 let employees = [];
 let editingId = null;
 
 // Display logged-in user's name
 welcomeUser.textContent = `Welcome, ${user.username}!`;
+
+// Show profile section for employees
+if (user.role !== "Employee") {
+    document.querySelector(".profile-section").style.display = "none";
+}
+
+// Hide Add Employee form for employees
+if (user.role === "Employee") {
+    document.querySelector(".form-section").style.display = "none";
+}
 
 // Logout functionality
 logoutBtn.addEventListener("click", function() {
@@ -31,7 +47,7 @@ logoutBtn.addEventListener("click", function() {
     window.location.href = "login.html";
 });
 
-// Add JWT token to API requests
+// Common API request function
 async function apiRequest(url, options = {}) {
     const response = await fetch(url, {
         ...options,
@@ -51,7 +67,97 @@ async function apiRequest(url, options = {}) {
     return response;
 }
 
-// Fetch all employees
+
+// ========================================
+// MY PROFILE FUNCTIONALITY
+// ========================================
+
+// Fetch logged-in employee's profile
+async function fetchMyProfile() {
+    try {
+        const response = await apiRequest(`${API_URL}/my-profile`);
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || "Failed to fetch profile");
+        }
+
+        const profile = data.profile;
+
+        profileDetails.innerHTML = `
+            <p><strong>Name:</strong> ${escapeHTML(profile.employee_name)}</p>
+            <p><strong>Email:</strong> ${escapeHTML(profile.email)}</p>
+            <p><strong>Department:</strong> ${escapeHTML(profile.department || "-")}</p>
+            <p><strong>Designation:</strong> ${escapeHTML(profile.designation || "-")}</p>
+        `;
+
+        profileContact.value = profile.contact || "";
+
+    } catch (error) {
+        console.error("Profile error:", error);
+        profileDetails.textContent = error.message;
+    }
+}
+
+
+// Escape text before displaying database values as HTML
+function escapeHTML(value) {
+    return String(value).replace(/[&<>"']/g, function(character) {
+        return {
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#039;"
+        }[character];
+    });
+}
+
+
+// Update employee's contact number
+profileForm.addEventListener("submit", async function(event) {
+    event.preventDefault();
+
+    const contact = profileContact.value.trim();
+
+    if (!contact) {
+        profileMessage.textContent = "Please enter your contact number.";
+        return;
+    }
+
+    try {
+        const response = await apiRequest(`${API_URL}/my-profile`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ contact })
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.message || "Profile update failed");
+        }
+
+        profileMessage.textContent = result.message;
+        profileMessage.style.color = "green";
+
+        fetchMyProfile();
+
+    } catch (error) {
+        console.error("Profile update error:", error);
+        profileMessage.textContent = error.message;
+        profileMessage.style.color = "red";
+    }
+});
+
+
+// ========================================
+// EMPLOYEE MANAGEMENT FUNCTIONALITY
+// ========================================
+
+// Fetch employees
 async function fetchEmployees() {
     try {
         const response = await apiRequest(API_URL);
@@ -69,6 +175,7 @@ async function fetchEmployees() {
         alert(error.message);
     }
 }
+
 
 // Display employees in table
 function displayEmployees(employeeList) {
@@ -116,6 +223,7 @@ function displayEmployees(employeeList) {
         employeeTable.appendChild(row);
     });
 }
+
 
 // Add or update employee
 employeeForm.addEventListener("submit", async function(event) {
@@ -177,6 +285,7 @@ employeeForm.addEventListener("submit", async function(event) {
     }
 });
 
+
 // Edit employee
 function editEmployee(employee) {
     if (user.role === "Employee") {
@@ -200,6 +309,7 @@ function editEmployee(employee) {
         behavior: "smooth"
     });
 }
+
 
 // Delete employee
 async function deleteEmployee(id) {
@@ -243,6 +353,7 @@ async function deleteEmployee(id) {
     }
 }
 
+
 // Search employees
 searchInput.addEventListener("input", function() {
     const searchText = searchInput.value.toLowerCase();
@@ -258,5 +369,10 @@ searchInput.addEventListener("input", function() {
     displayEmployees(filteredEmployees);
 });
 
-// Load employees when page opens
+
+// Load data when dashboard opens
+if (user.role === "Employee") {
+    fetchMyProfile();
+}
+
 fetchEmployees();

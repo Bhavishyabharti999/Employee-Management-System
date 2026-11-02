@@ -5,13 +5,27 @@ const router = express.Router();
 
 const {
     registerUser,
-    loginUser
+    loginUser,
+    createUser
 } = require("../controllers/authController");
 
-// Register user
+const {
+    verifyToken,
+    checkRole
+} = require("../middleware/authMiddleware");
+
+// Public employee registration
 router.post("/register", registerUser);
 
-// Login user
+// Public login
 router.post("/login", loginUser);
+
+// Admin and HR Manager can create users
+router.post(
+    "/create-user",
+    verifyToken,
+    checkRole("Admin", "HR Manager"),
+    createUser
+);
 
 module.exports = router;
